@@ -1,0 +1,28 @@
+services:
+  db:
+    image: mysql:9.7.0
+    container_name: mysql-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/1-schema.sql:ro
+      - ./seed.sql:/docker-entrypoint-initdb.d/2-seed.sql:ro
+
+  adminer:
+    image: adminer
+    container_name: adminer-ui
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:
