@@ -12,8 +12,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./schema.sql:/docker-entrypoint-initdb.d/1-schema.sql:ro
-      - ./seed.sql:/docker-entrypoint-initdb.d/2-seed.sql:ro
 
   adminer:
     image: adminer
@@ -23,6 +21,42 @@ services:
       - "8080:8080"
     depends_on:
       - db
+
+  migrate:
+    image: flyway/flyway:12
+    container_name: mysql-migrations
+    profiles:
+      - tools
+    depends_on:
+      - db
+    command:
+      - -url=jdbc:mysql://db:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&useSSL=false
+      - -user=${MYSQL_USER}
+      - -password=${MYSQL_PASSWORD}
+      - -locations=filesystem:/flyway/migrations
+      - -connectRetries=60
+      - -baselineOnMigrate=true
+      - migrate
+    volumes:
+      - ./migrations:/flyway/migrations:ro
+
+  seed:
+    image: mysql:9.7.0
+    container_name: mysql-seed
+    profiles:
+      - tools
+    depends_on:
+      - db
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    command:
+      - sh
+      - -c
+      - mysql -h db -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} $${MYSQL_DATABASE} < /seeds/seed.sql
+    volumes:
+      - ./seeds:/seeds:ro
 
 volumes:
   mysql_data:
